@@ -5,6 +5,8 @@
 from urllib import request, parse, error
 import json, re, os, random
 
+import csv
+
 URL_PAGE = r'https://mm.taobao.com/tstar/search/tstar_model.do?_input_charset=utf-8'
 
 useragent_list = [
@@ -21,11 +23,12 @@ useragent_list = [
         'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36'
     ]
 
-def get_user():
+def get_user(writer):
     req = request.Request(URL_PAGE)
-    req.add_header('User-Agent', random.choice(useragent_list))
 
-    for n in range(1, 2):
+
+    for n in range(1, 166):
+        req.add_header('User-Agent', random.choice(useragent_list))
         with request.urlopen(req, data=('q&viewFlag=A&sortType=default&searchStyle=&searchRegion=city%3A&searchFansNum=&currentPage='+ str(n) + '&pageSize=100Name').encode('utf-8')) as f:
             print('status', f.status, f.reason)
             # for k, v in f.getheaders():
@@ -33,11 +36,16 @@ def get_user():
 
             # print('data: ', f.read().decode('gbk'))
             info = json.loads(f.read().decode('gbk'))
-            # print(info['data']['searchDOList'])
 
+            # print(info['data']['searchDOList'])
             for user in info['data']['searchDOList']:
                 print('%s: %s, %s, %s, %d, %s' % (user['realName'], user['city'], str(user['height']),
                                                 str(user['weight']), user['totalFavorNum'], str(user['userId'])))
+
+                writer.writerow([user['realName'], user['city'], str(user['height']),
+                                str(user['weight']), user['totalFavorNum'], str(user['userId'])])
+
+                # 爬取照片
                 get_albums(str(user['userId']))
 
 
@@ -96,5 +104,13 @@ def save_photo(user_id, album_id, index, picUrl):
     except error.HTTPError as e:
         print(e)
 
-get_user()
+def save2csv():
+    pass
+
+csvFile = open('./tmm/tmm.csv', 'w', newline='')
+writer = csv.writer(csvFile)
+fileHeader = ['name', 'city', 'height', 'weight', 'favors', 'userId'] # 本来想把img路径存入进去的, 'imgs'，想想还是算了。
+writer.writerow(fileHeader)
+
+get_user(writer)
 
