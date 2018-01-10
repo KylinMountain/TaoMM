@@ -3,9 +3,12 @@
 
 
 from urllib import request, parse, error
-import json, re, os, random
-
+import json
+import re
+import os
+import random
 import csv
+from bs4 import BeautifulSoup
 
 URL_PAGE = r'https://mm.taobao.com/tstar/search/tstar_model.do?_input_charset=utf-8'
 
@@ -26,7 +29,6 @@ useragent_list = [
 def get_user(writer):
     req = request.Request(URL_PAGE)
 
-
     for n in range(1, 166):
         req.add_header('User-Agent', random.choice(useragent_list))
         with request.urlopen(req, data=('q&viewFlag=A&sortType=default&searchStyle=&searchRegion=city%3A&searchFansNum=&currentPage='+ str(n) + '&pageSize=100Name').encode('utf-8')) as f:
@@ -42,9 +44,9 @@ def get_user(writer):
                 print('%s: %s, %s, %s, %d, %s' % (user['realName'], user['city'], str(user['height']),
                                                 str(user['weight']), user['totalFavorNum'], str(user['userId'])))
 
-                writer.writerow([user['realName'], user['city'], str(user['height']),
-                                str(user['weight']), user['totalFavorNum'], str(user['userId'])])
-
+                # save useful info into csv
+                save2csv(user['realName'], user['city'], str(user['height']), str(user['weight']),
+                          user['totalFavorNum'], get_order_num(str(user['userId'])), str(user['userId']))
                 # 爬取照片
                 get_albums(str(user['userId']))
 
@@ -64,6 +66,7 @@ def get_albums(uid):
         for line in albums[::2]:
             album_id = re.split('&album_id=', line)[1].split('&')[0]
             get_photo_list(uid, album_id)
+
 
 URL_PHOTOS = 'https://mm.taobao.com/album/json/get_album_photo_list.htm'
 # ?user_id=176817195&album_id=10000962815
@@ -87,6 +90,7 @@ def get_photo_list(user_id, album_id):
             save_photo(user_id, album_id, index, imgUrl)
             index = index + 1
 
+
 def save_photo(user_id, album_id, index, picUrl):
     d = os.path.dirname('./tmm/'+user_id+'/')
     if not os.path.exists(d):
@@ -104,13 +108,34 @@ def save_photo(user_id, album_id, index, picUrl):
     except error.HTTPError as e:
         print(e)
 
-def save2csv():
-    pass
 
-csvFile = open('./tmm/tmm.csv', 'w', newline='')
-writer = csv.writer(csvFile)
-fileHeader = ['name', 'city', 'height', 'weight', 'favors', 'userId'] # 本来想把img路径存入进去的, 'imgs'，想想还是算了。
-writer.writerow(fileHeader)
+URL_PERSONAL = 'https://mm.taobao.com/self/aiShow.htm?&userId='
 
+
+def get_order_num(user_id):
+    with request.urlopen(URL_PERSONAL+user_id) as res:
+        print('get order num status:', res.status, res.reason)
+        if res.status == 200:
+            html = res.read().decode('gbk')
+            bshtml = BeautifulSoup(html, 'lxml')
+            result = bshtml.find_all('a', target='_blank',
+                                     href='//mm.taobao.com/self/model_card.htm?user_id=' + user_id + '&sub_tab=LI_2')
+
+            return result[0].string if len(result) > 0 else 0
+    return 0
+
+
+def save2csv(name, city, height, weight, favors, orders, user_id):
+    writer.writerow([name, city, height, weight, favors, orders, user_id])
+
+
+def init_csv():
+    csv_file = open('./tmm/tmm.csv', 'w', newline='')  # Adding newline will not produce a empty line.
+    mwriter = csv.writer(csv_file)
+    file_header = ['name', 'city', 'height', 'weight', 'favors', 'orders', 'userId']  # 本来想把img路径存入进去的, 'imgs'，想想还是算了。
+    mwriter.writerow(file_header)
+    return mwriter
+
+writer = init_csv()
 get_user(writer)
 
