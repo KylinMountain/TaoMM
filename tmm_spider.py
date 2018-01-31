@@ -48,7 +48,7 @@ def get_user(writer):
                 save2csv(user['realName'], user['city'], str(user['height']), str(user['weight']),
                           user['totalFavorNum'], get_order_num(str(user['userId'])), str(user['userId']))
                 # 爬取照片
-                get_albums(str(user['userId']))
+                # get_albums(str(user['userId']))
 
 
 URL_USER = 'https://mm.taobao.com/self/album/open_album_list.htm?_charset=utf-8&user_id%20='
@@ -130,12 +130,15 @@ def save2csv(name, city, height, weight, favors, orders, user_id):
 
 
 def init_csv():
-    csv_file = open('./tmm/tmm.csv', 'w', newline='')  # Adding newline will not produce a empty line.
-    mwriter = csv.writer(csv_file)
+    mcsv_file = open('./tmm/tmm.csv', 'w', newline='')  # Adding newline will not produce a empty line.
+    mwriter = csv.writer(mcsv_file)
     file_header = ['name', 'city', 'height', 'weight', 'favors', 'orders', 'userId']  # 本来想把img路径存入进去的, 'imgs'，想想还是算了。
     mwriter.writerow(file_header)
-    return mwriter
+    return mwriter, mcsv_file
 
-writer = init_csv()
+writer, csv_file = init_csv()
 get_user(writer)
+# 关闭csv writer
+csv_file.close()
+
 
