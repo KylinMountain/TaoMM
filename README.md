@@ -22,6 +22,10 @@
 
 数据文件在gzf_zb/gzf_zb.csv
 
+## 3. 爬取豆瓣读书‘未来简史’评论
+
+代码在book_comments中的future_story_comments.py, 爬取的数据在future_story.csv文件中
+
 
 
 
